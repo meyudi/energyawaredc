@@ -9,14 +9,18 @@
 
 using namespace std;
 
-enum class MachineState : unsigned char {POWER_OFF, LOW_POWER, HIGH_POWER};
+enum class PowerState : unsigned char {IDLE, LOW_POWER, MEDIUM_POWER, HIGH_POWER};
 
 class PhysicalMachine
 {
 private:
     const int id;
-    MachineState state;
+    const int ringId;
+    const PowerState state;
     float utilization;
+    const Byte totalMemory;
+    Byte memoryConsumed;
+    const int vmDensity;
     int numVMs;
     vector<VirtualMachine> vmList;
 };

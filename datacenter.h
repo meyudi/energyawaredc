@@ -5,6 +5,7 @@
 #ifndef ENERGYAWAREDC_DATACENTER_H
 #define ENERGYAWAREDC_DATACENTER_H
 #include<vector>
+#include "physicalmachine.h"
 #include "virtualmachine.h"
 
 using namespace std;
@@ -17,6 +18,8 @@ private:
     int totalPMs, totalVMs;
     EnergyUnit totalUnits;
     EnergyUnit unitsConsumed;
+    vector<PhysicalMachine> ring[3];
+    vector<VirtualMachine> virtualmachines;
 public:
     DataCenter();
 };
