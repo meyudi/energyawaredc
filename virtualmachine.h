@@ -5,6 +5,7 @@
 #ifndef ENERGYAWAREDC_VIRTUALMACHINE_H
 #define ENERGYAWAREDC_VIRTUALMACHINE_H
 
+typedef unsigned int Id;
 typedef int ArrivalRate;
 typedef int ServiceRate;
 typedef unsigned long long Byte;
@@ -12,7 +13,8 @@ typedef unsigned long long Byte;
 class VirtualMachine
 {
 private:
-    const int id;
+    const Id virtualMachineId;
+    Id hostId;
     ArrivalRate lambda[96]; // The workload characterized as a series of lambdas, each for 15 minutes.
     ServiceRate mu;
     float utilization;
