@@ -3,3 +3,15 @@
 //
 
 #include "event.h"
+
+Event::Event(SimulationTime time, EventType type, Id vmId, Id pmId, Id newPmId)
+{
+    this->time = time ;
+    this->type = type;
+    this->vmId = vmId;
+    this->pmId = pmId;
+    this->newPmId = newPmId;
+}
+
+Event::~Event()
+{ }
