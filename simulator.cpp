@@ -21,6 +21,8 @@ int Simulator::Start()
 {
     // Initialize the eventQueue with all arrivals for the VMs.
 
+    InitializeEventQueue();
+
     while (true);
     //GetNextEvent();
     return 0;
