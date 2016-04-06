@@ -9,6 +9,7 @@
 
 #include "event.h"
 #include "datacenter.h"
+#include "randomnumbergenerator.h"
 
 using namespace std;
 
