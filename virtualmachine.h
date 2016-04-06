@@ -24,6 +24,7 @@ public:
     Byte requestQueueSize; // The size of the request queue of this VM
     int totalRequestCount; // Represents the total number of requests in the system
 
-    VirtualMachine();
+    VirtualMachine(); // constructor
+    ~VirtualMachine(); // destructor
 };
 #endif //ENERGYAWAREDC_VIRTUALMACHINE_H
