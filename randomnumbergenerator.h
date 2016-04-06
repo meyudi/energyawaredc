@@ -18,6 +18,14 @@ private:
     gsl_rng **r;
 
 public:
+    /*
+     * This function returns the simulation time using the exponential function
+     * index: index of the random number generator
+     * parameter: exponential distribution parameter
+     *
+     *
+     */
     SimulationTime GenerateNextNumber(int index, Rate parameter);
+
 };
 #endif //ENERGYAWAREDC_RANDOMNUMBERGENERATOR_H
