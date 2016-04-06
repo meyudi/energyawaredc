@@ -6,25 +6,24 @@
 #define ENERGYAWAREDC_VIRTUALMACHINE_H
 
 typedef unsigned int Id;
-typedef int ArrivalRate;
-typedef int ServiceRate;
+
+typedef int Rate; // Unit of rates is per second.
 typedef unsigned long long Byte;
 
 class VirtualMachine
 {
-private:
-    const Id virtualMachineId;
-    Id hostId;
-    ArrivalRate lambda[96]; // The workload characterized as a series of lambdas, each for 15 minutes.
-    ServiceRate mu;
-    float utilization;
-    const Byte totalMemory;
-    Byte memoryConsumed;
-    const Byte requestMemorySize; // Indicates the amount of memory allocated for processing the request.
-    const Byte queuedRequestSize;
-    int queueLength;
-
 public:
+    Id virtualMachineId;
+    Id hostId;
+    Rate lambda[96]; // The workload characterized as a series of lambdas, each for 15 minutes
+    Rate mu;
+    float utilization;
+    Byte totalMemory;
+    Byte memoryConsumed;
+    Byte requestMemorySize; // Indicates the amount of memory allocated for processing the request
+    Byte requestQueueSize; // The size of the request queue of this VM
+    int totalRequestCount; // Represents the total number of requests in the system
+
     VirtualMachine();
 };
 #endif //ENERGYAWAREDC_VIRTUALMACHINE_H

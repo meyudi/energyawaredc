@@ -10,18 +10,21 @@
 
 using namespace std;
 
-enum class PowerState : unsigned char {IDLE, LOW_POWER, MEDIUM_POWER, HIGH_POWER};
+enum class PowerState: unsigned char
+{
+    IDLE, LOW_POWER, MEDIUM_POWER, HIGH_POWER
+};
 
 class PhysicalMachine
 {
-private:
-    const Id physicalMachineId;
+public:
+    Id physicalMachineId;
 //    const int ringId;
-    const PowerState state;
+    PowerState state;
     float utilization;
-    const Byte totalMemory;
+    Byte totalMemory;
     Byte memoryConsumed;
-    const int vmDensity;
+    int vmDensity;
     int numVMs;
     vector<Id> vmList;
 };

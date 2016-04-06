@@ -7,13 +7,20 @@
 
 #include "virtualmachine.h"
 
-typedef unsigned long long SimulationTime;
-enum class EventType: unsigned char {REQUEST_ARRIVAL, REQUEST_DEPARTURE, MIGRATION_FINISHED};
+typedef double SimulationTime; // time unit is in seconds.
+
+enum class EventType: unsigned char
+{
+    REQUEST_ARRIVAL, REQUEST_DEPARTURE, MIGRATION_FINISHED
+};
 
 class Event
 {
-    const SimulationTime time;
-    const EventType type;
+public:
+    SimulationTime time;
+    EventType type;
     Id vmId, pmId, newPmId;
+
+    Event();
 };
 #endif //ENERGYAWAREDC_EVENT_H

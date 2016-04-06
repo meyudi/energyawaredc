@@ -15,14 +15,14 @@ typedef unsigned int EnergyUnit;
 
 class DataCenter
 {
-private:
+public:
     int totalPMs, totalVMs;
     EnergyUnit totalUnits;
     EnergyUnit unitsConsumed;
-    PhysicalMachine* physicalMachines;
+    PhysicalMachine *physicalMachines;
     vector<Id> ring[3];
-    VirtualMachine* virtualmachines;
-public:
+    VirtualMachine *virtualmachines;
+
     DataCenter();
 };
 #endif //ENERGYAWAREDC_DATACENTER_H
