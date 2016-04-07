@@ -18,7 +18,7 @@ public:
     Rate lambda[96]; // The workload characterized as a series of lambdas, each for 15 minutes
     Rate mu;
     float utilization;
-    Byte totalMemory;
+//    Byte totalMemory; // Assuming VM has enough memory i.e. over-committed memory
     Byte memoryConsumed;
     Byte requestMemorySize; // Indicates the amount of memory allocated for processing the request
     Byte requestQueueSize; // The size of the request queue of this VM

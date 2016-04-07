@@ -7,8 +7,20 @@
 
 Simulator::Simulator()
 {
-    // Init DC object.
+    // Initialize the DC object.
+    // Total number of PMs
     cin >> dc.totalPMs;
+    // Create and initialize the PM array
+    dc.physicalMachines = new PhysicalMachine[dc.totalPMs];
+    for (int i = 0; i < dc.totalPMs; i++)
+    {
+        dc.physicalMachines[i].physicalMachineId = i;
+        dc.physicalMachines[i].state = PowerState::IDLE;
+        dc.physicalMachines[i].utilization = 0;
+        cin >> dc.physicalMachines[i].totalMemory;
+    }
+
+    cin >> dc.totalVMs;
     // Initialize all other data members.
 }
 

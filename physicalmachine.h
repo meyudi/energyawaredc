@@ -19,12 +19,12 @@ class PhysicalMachine
 {
 public:
     Id physicalMachineId;
-//    const int ringId;
+    const int ringId;
     PowerState state;
     float utilization;
     Byte totalMemory;
     Byte memoryConsumed;
-    int vmDensity;
+//    int vmDensity;
     int numVMs;
     vector<Id> vmList;
 };
