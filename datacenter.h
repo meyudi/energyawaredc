@@ -22,7 +22,5 @@ public:
     PhysicalMachine *physicalMachines;
     vector<Id> ring[3];
     VirtualMachine *virtualmachines;
-
-    DataCenter();
 };
 #endif //ENERGYAWAREDC_DATACENTER_H

@@ -2,19 +2,40 @@
 // Created by bhavesh on 6/4/16.
 //
 
+#include <iostream>
 #include "randomnumbergenerator.h"
+
+void RandomNumberGenerator::Initialize()
+{
+    gsl_rng *r1 = gsl_rng_alloc(this->T);
+    gsl_rng_set(r1, this->seed);
+
+    this->secondarySeeds = new unsigned long[this->totalSeeds];
+    // Generate the new seeds for the experiment with uniform distribution
+    for (int i = 0; i < this->totalSeeds; i++)
+    {
+        this->secondarySeeds[i] = (unsigned long) (gsl_rng_uniform(r1) * 1000000);
+    }
+    std::cout << std::endl;
+
+    this->r = new gsl_rng *[this->totalSeeds];
+
+    for (int i = 0; i < this->totalSeeds; i++)
+    {
+        this->r[i] = gsl_rng_alloc(this->T);
+        gsl_rng_set(this->r[i], this->secondarySeeds[i]);
+    }
+}
 
 SimulationTime RandomNumberGenerator::GenerateNextNumber(int index, Rate parameter)
 {
-    gsl_rng_env_setup();
+    return gsl_ran_exponential(r[index], (1 / (double) parameter));
+}
 
-    T[0] = gsl_rng_default;
-    r[0] = gsl_rng_alloc(T[0]);
-    int i, n = 10;
-    for (i = 0; i < n; i++) {
-        double u = gsl_rng_uniform(r[0]);
-        printf("%.5f\n", u);
-    }
-
-    gsl_rng_free(r[0]);
+RandomNumberGenerator::~RandomNumberGenerator()
+{
+    for (int i = 0; i < totalSeeds; i++)
+        gsl_rng_free(this->r[i]);
+    delete this->secondarySeeds;
+    delete this->r;
 }

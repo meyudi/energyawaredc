@@ -12,7 +12,7 @@ using namespace std;
 
 enum class PowerState: unsigned char
 {
-    IDLE, LOW_POWER, MEDIUM_POWER, HIGH_POWER
+    HIGH_POWER = 0, MEDIUM_POWER = 1, LOW_POWER = 2, IDLE = 3,
 };
 
 class PhysicalMachine
@@ -24,8 +24,8 @@ public:
     float utilization;
     Byte totalMemory;
     Byte memoryConsumed;
-//    int vmDensity;
-    int numVMs;
+//    int vmDensity; // Commented. Not directly usable in our context. We assume that we can only pack as many as allowed.
+//    int numVMs; // Commented. As vmList.size() will give us the number of VMs on this PM.
     vector<Id> vmList;
 };
 #endif //ENERGYAWAREDC_PHYSICALMACHINE_H

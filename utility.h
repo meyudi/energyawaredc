@@ -13,18 +13,21 @@ using namespace std;
 // The code for Log class is taken from Dr. Dobb's Journal September 2007 issue
 // with appropriate modifications to suit our needs. <http://www.drdobbs.com/cpp/logging-in-c/201804215>
 
-enum class LogLevel {INFO, DEBUG};
+enum class LogLevel
+{
+    INFO, DEBUG
+};
 
 class Logger
 {
 private:
-    ostringstream ss,nullstream;
+    ostringstream ss, nullstream;
     LogLevel logLevel;
 
 public:
     Logger(LogLevel);
     ~Logger();
-    ostringstream& log(LogLevel);
+    ostringstream &log(LogLevel);
 };
 
 #endif //ENERGYAWAREDC_UTILITY_H

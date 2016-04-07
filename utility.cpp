@@ -24,4 +24,5 @@ Logger::~Logger()
 {
     cout << ss.str();
     ss.flush();
+    nullstream.flush();
 }

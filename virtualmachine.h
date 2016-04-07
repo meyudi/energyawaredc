@@ -18,13 +18,10 @@ public:
     Rate lambda[96]; // The workload characterized as a series of lambdas, each for 15 minutes
     Rate mu;
     float utilization;
-//    Byte totalMemory; // Assuming VM has enough memory i.e. over-committed memory
+//    Byte totalMemory; // Commented. Assuming VM has enough memory i.e. over-committed memory
     Byte memoryConsumed;
     Byte requestMemorySize; // Indicates the amount of memory allocated for processing the request
-    Byte requestQueueSize; // The size of the request queue of this VM
+//    Byte requestQueueSize; // Commented. Because of totalRequestCount. The size of the request queue of this VM
     int totalRequestCount; // Represents the total number of requests in the system
-
-    VirtualMachine(); // constructor
-    ~VirtualMachine(); // destructor
 };
 #endif //ENERGYAWAREDC_VIRTUALMACHINE_H
