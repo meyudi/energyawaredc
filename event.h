@@ -22,6 +22,7 @@ public:
     Id vmId, pmId, newPmId;
 
 
+    Event();
     Event(SimulationTime time , EventType type, Id vmId, Id pmId, Id newPmId) ;
     ~Event() ;
 };
