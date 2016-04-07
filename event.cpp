@@ -4,6 +4,9 @@
 
 #include "event.h"
 
+Event::Event()
+{ }
+
 Event::Event(SimulationTime time, EventType type, Id vmId, Id pmId, Id newPmId)
 {
     this->time = time ;
