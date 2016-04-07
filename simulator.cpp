@@ -24,7 +24,6 @@ int Simulator::Start()
     InitializeEventQueue();
 
     while (true);
-    //GetNextEvent();
     return 0;
 }
 
