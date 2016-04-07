@@ -27,6 +27,7 @@ private:
     SimulationTime simulationClockTime;
     priority_queue<Event, vector<Event>, comparator> eventQueue;
     DataCenter dc;
+    RandomNumberGenerator rng ;
 public:
     Simulator();
     ~Simulator();
