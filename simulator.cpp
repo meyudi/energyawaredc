@@ -90,7 +90,7 @@ void Simulator::HandleArrivalEvent(const Event & event)
     *
     */
     SimulationTime nextTime;
-    double
+    
 
     if (dc.virtualmachines[event.vmId].totalRequestCount > 0)
     {
