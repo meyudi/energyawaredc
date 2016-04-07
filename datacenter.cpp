@@ -8,5 +8,5 @@ using namespace std;
 
 DataCenter::DataCenter()
 {
-    cout << "Wow";
+    cout << "Wow! DC object created!!"<<endl;
 }

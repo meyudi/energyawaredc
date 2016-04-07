@@ -10,6 +10,7 @@
 #include "event.h"
 #include "datacenter.h"
 #include "randomnumbergenerator.h"
+#include "utility.h"
 
 using namespace std;
 
@@ -27,7 +28,8 @@ private:
     SimulationTime simulationClockTime;
     priority_queue<Event, vector<Event>, comparator> eventQueue;
     DataCenter dc;
-    RandomNumberGenerator rng ;
+    RandomNumberGenerator rng;
+    LogLevel logLevel;
 public:
     Simulator();
     ~Simulator();

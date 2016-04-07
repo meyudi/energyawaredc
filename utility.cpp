@@ -4,12 +4,24 @@
 
 #include "utility.h"
 
-void Utility::log(stringstream ss, LogLevel logLevel)
+Logger::Logger(LogLevel logLevel)
 {
-
-    if (logLevel == LogLevel::DEBUG)
-    {
-
-    }
+    this->nullstream.setstate(ios_base::badbit);
+    this->logLevel = logLevel;
 }
 
+ostringstream &Logger::log(LogLevel logLevel)
+{
+    if (this->logLevel == LogLevel::DEBUG)
+        return ss;
+    else if (logLevel == LogLevel::INFO)
+        return ss;
+    else
+        return nullstream;
+}
+
+Logger::~Logger()
+{
+    cout << ss.str();
+    ss.flush();
+}
