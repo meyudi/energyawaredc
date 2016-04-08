@@ -136,7 +136,6 @@ void Simulator::InitializeEventQueue()
 
 void Simulator::HandleArrivalEvent(const Event &event)
 {
-    //TODO: how to decide upon the lmbda value; how to use the simulation clock to get the corresponding slot lamda
 
     /* get th vm object
      * total number of request > 0 : server busy else server idle
@@ -194,7 +193,7 @@ void Simulator::HandleArrivalEvent(const Event &event)
 
 
     dc.virtualmachines[event.vmId].utilization =
-        dc.virtualmachines[event.vmId].lambda[0] / dc.virtualmachines[event.vmId].mu;
+        dc.virtualmachines[event.vmId].lambda[(int)event.time/900] / dc.virtualmachines[event.vmId].mu;
     //dc.physicalMachines[event.vmId].utilization = dc.virtualmachines[event.vmId].utilization ;
     // threshold check to create a new migration finished event
 
@@ -204,7 +203,49 @@ void Simulator::HandleArrivalEvent(const Event &event)
 }
 
 void Simulator::HandleDepartureEvent(const Event &event)
-{ }
+{
+    /*
+     * get the vm object
+     * if sever is busy: update the total request count in the vm; if the count is non zero schedule a departure event
+     * if sever is idle: do not do anything
+     * get the pm with host id; decrement the memory consumption of the vm and the pm
+     * if threshold cross schedule the migration event
+     */
+    SimulationTime  nextTime;
+
+    if (dc.virtualmachines[event.vmId].totalRequestCount > 0)
+    {
+        dc.virtualmachines[event.vmId].totalRequestCount -= 1;
+
+        if (dc.virtualmachines[event.vmId].totalRequestCount > 0)
+        {
+            nextTime = rng.GenerateNextNumber(2 * event.vmId +1, dc.virtualmachines[event.vmId].mu);
+
+            Event nextDeparture =
+                Event(event.time + nextTime, EventType::REQUEST_DEPARTURE, event.vmId, event.pmId, event.newPmId );
+
+            eventQueue.push(nextDeparture);
+        }
+
+    }
+    else
+    {
+        // do not do anything
+    }
+
+    // change in physical machine state
+
+    // memory consumption of the virtual and physical machines increment by requestMemorySize; no change in cpu utilization
+    dc.virtualmachines[event.vmId].memoryConsumed -= dc.virtualmachines[event.vmId].requestMemorySize;
+    dc.physicalMachines[event.pmId].memoryConsumed -= dc.virtualmachines[event.vmId].requestMemorySize;
+
+
+    dc.virtualmachines[event.vmId].utilization =
+        dc.virtualmachines[event.vmId].lambda[(int)event.time/900] / dc.virtualmachines[event.vmId].mu;
+
+
+
+}
 
 void Simulator::HandleMigrationCompletionEvent(const Event &event)
 { }
