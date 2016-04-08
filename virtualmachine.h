@@ -23,5 +23,6 @@ public:
     Byte requestMemorySize; // Indicates the amount of memory allocated for processing the request
 //    Byte requestQueueSize; // Commented. Because of totalRequestCount. The size of the request queue of this VM
     int totalRequestCount; // Represents the total number of requests in the system
+    bool isMigrating;
 };
 #endif //ENERGYAWAREDC_VIRTUALMACHINE_H

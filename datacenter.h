@@ -11,7 +11,8 @@
 
 using namespace std;
 
-typedef unsigned long EnergyUnit; // In Watt-seconds
+//typedef unsigned long EnergyUnit; // In Watt-seconds
+typedef float EnergyUnit; // In Watt-seconds
 
 class DataCenter
 {
