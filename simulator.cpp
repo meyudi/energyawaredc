@@ -116,8 +116,6 @@ void Simulator::InitializeEventQueue()
     Logger logger(this->logLevel);
     logger.log(LogLevel::DEBUG) << "bhavesh Singh" << endl << "Uddhav Arote";
 
-    //TODO: generate random number generator object to refer to the functions
-
     SimulationTime arrivalTime = 0.0;
     //goto each and every virtual machine and call GenerateNextNumber with rng index and inverse of arrival rate
     for (int i = 0; i < dc.totalVMs; ++i)
@@ -154,7 +152,7 @@ void Simulator::HandleArrivalEvent(const Event &event)
     if (dc.virtualmachines[event.vmId].totalRequestCount > 0)
     {
         //server busy
-        nextTime = rng.GenerateNextNumber(2 * event.vmId, dc.virtualmachines[event.vmId].lambda[0]);
+        nextTime = rng.GenerateNextNumber(2 * event.vmId, dc.virtualmachines[event.vmId].lambda[(int)event.time/900]);
 
         //generate a new arrival event
         Event newArrivalEvent =
@@ -173,7 +171,7 @@ void Simulator::HandleArrivalEvent(const Event &event)
         dc.virtualmachines[event.vmId].totalRequestCount += 1;
 
         // get next time for arrival event
-        nextTime = rng.GenerateNextNumber(2 * event.vmId, dc.virtualmachines[event.vmId].lambda[0]);
+        nextTime = rng.GenerateNextNumber(2 * event.vmId, dc.virtualmachines[event.vmId].lambda[(int)event.time/900]);
         Event newArrivalEvent =
             Event(event.time + nextTime, EventType::REQUEST_ARRIVAL, event.vmId, event.pmId, event.newPmId);
 
