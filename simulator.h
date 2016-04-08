@@ -30,6 +30,9 @@ private:
     DataCenter dc;
     RandomNumberGenerator rng;
     LogLevel logLevel;
+
+    void MigrateVM(const Event &);
+
 public:
     Simulator();
     ~Simulator();

@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include "simulator.h"
+#include "configuration.h"
 
 Simulator::Simulator()
 {
@@ -55,6 +56,7 @@ Simulator::Simulator()
     for (unsigned int i = 0, ringId = 0; i < dc.totalPMs; i++, ringId = (++ringId) % 3)
     {
         dc.physicalMachines[i].ringId = ringId;
+        dc.ring[ringId].push_back(i);
         dc.physicalMachines[i].state = static_cast<PowerState>(ringId);
     }
 
@@ -104,7 +106,7 @@ int Simulator::Start()
 
 
         //pop the processed event
-        eventQueue.pop() ;
+        eventQueue.pop();
 
     }
     return 0;
@@ -139,7 +141,7 @@ void Simulator::HandleArrivalEvent(const Event &event)
 {
 
     //update Simulation Clock time
-    this->simulationClockTime = event.time ;
+    this->simulationClockTime = event.time;
 
     /* get th vm object
      * total number of request > 0 : server busy else server idle
@@ -155,7 +157,8 @@ void Simulator::HandleArrivalEvent(const Event &event)
     if (dc.virtualmachines[event.vmId].totalRequestCount > 0)
     {
         //server busy
-        nextTime = rng.GenerateNextNumber(2 * event.vmId, dc.virtualmachines[event.vmId].lambda[(int)event.time/900]);
+        nextTime =
+            rng.GenerateNextNumber(2 * event.vmId, dc.virtualmachines[event.vmId].lambda[(int) event.time / 900]);
 
         //generate a new arrival event
         Event newArrivalEvent =
@@ -174,7 +177,8 @@ void Simulator::HandleArrivalEvent(const Event &event)
         dc.virtualmachines[event.vmId].totalRequestCount += 1;
 
         // get next time for arrival event
-        nextTime = rng.GenerateNextNumber(2 * event.vmId, dc.virtualmachines[event.vmId].lambda[(int)event.time/900]);
+        nextTime =
+            rng.GenerateNextNumber(2 * event.vmId, dc.virtualmachines[event.vmId].lambda[(int) event.time / 900]);
         Event newArrivalEvent =
             Event(event.time + nextTime, EventType::REQUEST_ARRIVAL, event.vmId, event.pmId, event.newPmId);
 
@@ -197,7 +201,7 @@ void Simulator::HandleArrivalEvent(const Event &event)
 
 
     dc.virtualmachines[event.vmId].utilization =
-        dc.virtualmachines[event.vmId].lambda[(int)event.time/900] / dc.virtualmachines[event.vmId].mu;
+        dc.virtualmachines[event.vmId].lambda[(int) event.time / 900] / dc.virtualmachines[event.vmId].mu;
     //dc.physicalMachines[event.vmId].utilization = dc.virtualmachines[event.vmId].utilization ;
     // threshold check to create a new migration finished event
 
@@ -209,7 +213,7 @@ void Simulator::HandleArrivalEvent(const Event &event)
 void Simulator::HandleDepartureEvent(const Event &event)
 {
     //update Simulation Clock time
-    this->simulationClockTime = event.time ;
+    this->simulationClockTime = event.time;
 
     /*
      * get the vm object
@@ -218,7 +222,7 @@ void Simulator::HandleDepartureEvent(const Event &event)
      * get the pm with host id; decrement the memory consumption of the vm and the pm
      * if threshold cross schedule the migration event
      */
-    SimulationTime  nextTime;
+    SimulationTime nextTime;
 
     if (dc.virtualmachines[event.vmId].totalRequestCount > 0)
     {
@@ -226,10 +230,10 @@ void Simulator::HandleDepartureEvent(const Event &event)
 
         if (dc.virtualmachines[event.vmId].totalRequestCount > 0)
         {
-            nextTime = rng.GenerateNextNumber(2 * event.vmId +1, dc.virtualmachines[event.vmId].mu);
+            nextTime = rng.GenerateNextNumber(2 * event.vmId + 1, dc.virtualmachines[event.vmId].mu);
 
             Event nextDeparture =
-                Event(event.time + nextTime, EventType::REQUEST_DEPARTURE, event.vmId, event.pmId, event.newPmId );
+                Event(event.time + nextTime, EventType::REQUEST_DEPARTURE, event.vmId, event.pmId, event.newPmId);
 
             eventQueue.push(nextDeparture);
         }
@@ -248,15 +252,167 @@ void Simulator::HandleDepartureEvent(const Event &event)
 
 
     dc.virtualmachines[event.vmId].utilization =
-        dc.virtualmachines[event.vmId].lambda[(int)event.time/900] / dc.virtualmachines[event.vmId].mu;
-
-
+        dc.virtualmachines[event.vmId].lambda[(int) event.time / 900] / dc.virtualmachines[event.vmId].mu;
 
 }
 
 void Simulator::HandleMigrationCompletionEvent(const Event &event)
 {
     //update Simulation Clock time
-    this->simulationClockTime = event.time ;
+    this->simulationClockTime = event.time;
 
+}
+void Simulator::MigrateVM(const Event &event)
+{
+    // If power state is low or medium, i.e. ring 2,1, then only check if upper threshold (.33,.66) is crossed.
+    if (dc.physicalMachines[event.pmId].state == PowerState::LOW_POWER
+        || dc.physicalMachines[event.pmId].state == PowerState::MEDIUM_POWER)
+    {
+        float threshold = (3 - static_cast<int>(dc.physicalMachines[event.pmId].state)) / 3;
+        // Check if memory crossed the upper threshold.
+        if ((float) dc.physicalMachines[event.pmId].memoryConsumed / dc.physicalMachines[event.pmId].totalMemory
+            > threshold)
+        {
+            // Cycle through all the PMs in the ring from current ring to progressively higher power rings
+            // and place the current VM on the first PM to have enough free space
+            bool candidatePMFound = false;
+            for (unsigned int i = dc.physicalMachines[event.pmId].ringId; i >= 0; i--)
+            {
+                threshold = (3 - i) / 3;
+                for (unsigned int j = 0; j < dc.ring[i].size(); j++)
+                {
+                    if ((dc.physicalMachines[j].memoryConsumed
+                        + dc.virtualmachines[event.vmId].memoryConsumed) / dc.physicalMachines[j].totalMemory
+                        <= threshold)
+                    {
+                        // We found a candidate PM
+                        Event event1(this->simulationClockTime + Configuration::VM_MIGRATION_TIME,
+                                     EventType::MIGRATION_FINISHED,
+                                     event.vmId,
+                                     event.pmId,
+                                     j);
+                        this->eventQueue.push(event1);
+                        candidatePMFound = true;
+                        break;
+                    }
+                }
+                if (candidatePMFound)
+                    break;
+            }
+            if (!candidatePMFound)
+            {
+                // TODO: This is the corner case when all PMs in the inner most ring are also loaded fully. We do not handle this currently.
+            }
+        }
+            // Check if CPU crossed the upper threshold
+        else if (dc.physicalMachines[event.pmId].utilization > threshold)
+        {
+            // Cycle through all the PMs in the ring from current ring to progressively higher power rings
+            // and place the current VM on the first PM to have enough free CPU
+            bool candidatePMFound = false;
+            for (unsigned int i = dc.physicalMachines[event.pmId].ringId; i >= 0; i--)
+            {
+                threshold = (3 - i) / 3;
+                for (unsigned int j = 0; j < dc.ring[i].size(); j++)
+                {
+                    if ((dc.physicalMachines[j].utilization * dc.physicalMachines[j].vmList.size()
+                        + dc.virtualmachines[event.vmId].utilization) / (dc.physicalMachines[j].vmList.size() + 1)
+                        <= threshold)
+                    {
+                        // We found a candidate PM
+                        Event event1(this->simulationClockTime + Configuration::VM_MIGRATION_TIME,
+                                     EventType::MIGRATION_FINISHED,
+                                     event.vmId,
+                                     event.pmId,
+                                     j);
+                        this->eventQueue.push(event1);
+                        candidatePMFound = true;
+                        break;
+                    }
+                }
+                if (candidatePMFound)
+                    break;
+            }
+            if (!candidatePMFound)
+            {
+                // TODO: This is the corner case when all PMs in the inner most ring are also loaded fully. We do not handle this currently.
+            }
+        }
+    } // If power state is medium or high, i.e. ring 1,0, then only check if lower threshold (.33,.66) is crossed.
+    if (dc.physicalMachines[event.pmId].state == PowerState::MEDIUM_POWER
+        || dc.physicalMachines[event.pmId].state == PowerState::HIGH_POWER)
+    {
+        float threshold = (2 - static_cast<int>(dc.physicalMachines[event.pmId].state)) / 3;
+        // Check if memory crossed the lower threshold.
+        if ((float) dc.physicalMachines[event.pmId].memoryConsumed / dc.physicalMachines[event.pmId].totalMemory
+            <= threshold)
+        {
+            // Cycle through all the PMs in the ring from current ring to progressively lower power rings
+            // and place the current VM on the first PM to have enough free space
+            bool candidatePMFound = false;
+            for (unsigned int i = dc.physicalMachines[event.pmId].ringId + 1; i <= 2; i++)
+            {
+                threshold = (3 - i) / 3;
+                for (unsigned int j = 0; j < dc.ring[i].size(); j++)
+                {
+                    if ((dc.physicalMachines[j].memoryConsumed
+                        + dc.virtualmachines[event.vmId].memoryConsumed) / dc.physicalMachines[j].totalMemory
+                        <= threshold)
+                    {
+                        // We found a candidate PM
+                        Event event1(this->simulationClockTime + Configuration::VM_MIGRATION_TIME,
+                                     EventType::MIGRATION_FINISHED,
+                                     event.vmId,
+                                     event.pmId,
+                                     j);
+                        this->eventQueue.push(event1);
+                        candidatePMFound = true;
+                        break;
+                    }
+                }
+                if (candidatePMFound)
+                    break;
+            }
+            if (!candidatePMFound)
+            {
+                // TODO: This is the corner case when all PMs in the outer rings are also loaded fully. We do not handle this currently.
+            }
+        }
+
+            // Check if CPU crossed lower the threshold
+        else if (dc.physicalMachines[event.pmId].utilization > threshold)
+        {
+            // Cycle through all the PMs in the ring from current ring to progressively lower rings
+            // and place the current VM on the first PM to have enough free CPU
+            bool candidatePMFound = false;
+            for (unsigned int i = dc.physicalMachines[event.pmId].ringId +1; i <= 2; i++)
+            {
+                threshold = (3 - i) / 3;
+                for (unsigned int j = 0; j < dc.ring[i].size(); j++)
+                {
+                    if ((dc.physicalMachines[j].utilization * dc.physicalMachines[j].vmList.size()
+                        + dc.virtualmachines[event.vmId].utilization) / (dc.physicalMachines[j].vmList.size() + 1)
+                        <= threshold)
+                    {
+                        // We found a candidate PM
+                        Event event1(this->simulationClockTime + Configuration::VM_MIGRATION_TIME,
+                                     EventType::MIGRATION_FINISHED,
+                                     event.vmId,
+                                     event.pmId,
+                                     j);
+                        this->eventQueue.push(event1);
+                        candidatePMFound = true;
+                        break;
+                    }
+                }
+                if (candidatePMFound)
+                    break;
+            }
+            if (!candidatePMFound)
+            {
+                // TODO: This is the corner case when all PMs in the inner most ring are also loaded fully. We do not handle this currently.
+            }
+        }
+    }
+    // Check if CPU crossed the threshold.
 }

@@ -9,13 +9,14 @@
 // Use this class for all "configuration" constants that need to be used.
 class Configuration
 {
-    static SimulationTime VM_MIGRATION_TIME = 5000; // All times in milliseconds
+public:
+    static constexpr SimulationTime VM_MIGRATION_TIME = 10; // All times in seconds
 
     // Power consumed by Physical Machines in each state
     // Units: Watts
-    static unsigned long HIGH_POWER_STATE = 100;
-    static unsigned long MEDIUM_POWER_STATE = 80;
-    static unsigned long LOW_POWER_STATE=60;
-    static unsigned long IDLE_STATE = 40;
+    static constexpr unsigned long HIGH_POWER_STATE = 100;
+    static constexpr unsigned long MEDIUM_POWER_STATE = 80;
+    static constexpr unsigned long LOW_POWER_STATE=60;
+    static constexpr unsigned long IDLE_STATE = 40;
 };
 #endif //ENERGYAWAREDC_CONFIGURATION_H
