@@ -103,7 +103,8 @@ int Simulator::Start()
 
 
 
-        // need to update the lamda_i's of all the vms after every event execution
+        //pop the processed event
+        eventQueue.pop() ;
 
     }
     return 0;
