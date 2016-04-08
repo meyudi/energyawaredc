@@ -21,6 +21,7 @@ public:
     EnergyUnit unitsConsumed;
     PhysicalMachine *physicalMachines;
     vector<Id> ring[3];
+    vector<Id> idleRing[3];
     VirtualMachine *virtualmachines;
 };
 #endif //ENERGYAWAREDC_DATACENTER_H

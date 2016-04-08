@@ -11,6 +11,7 @@
 #include "datacenter.h"
 #include "randomnumbergenerator.h"
 #include "utility.h"
+#include "configuration.h"
 
 using namespace std;
 
@@ -30,6 +31,8 @@ private:
     DataCenter dc;
     RandomNumberGenerator rng;
     LogLevel logLevel;
+    void MigrateVM(const Event &) ;
+    void UpdateEnergyConsumption(const Event &);
 public:
     Simulator();
     ~Simulator();
@@ -39,5 +42,6 @@ public:
     void HandleArrivalEvent(const Event &);
     void HandleDepartureEvent(const Event &);
     void HandleMigrationCompletionEvent(const Event &);
+
 };
 #endif //ENERGYAWAREDC_SIMULATOR_H

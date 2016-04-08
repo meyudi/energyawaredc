@@ -19,7 +19,7 @@ class PhysicalMachine
 {
 public:
     Id physicalMachineId;
-    int ringId;
+    unsigned int ringId;
     PowerState state;
     float utilization;
     Byte totalMemory;
