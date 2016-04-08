@@ -137,6 +137,9 @@ void Simulator::InitializeEventQueue()
 void Simulator::HandleArrivalEvent(const Event &event)
 {
 
+    //update Simulation Clock time
+    this->simulationClockTime = event.time ;
+
     /* get th vm object
      * total number of request > 0 : server busy else server idle
      * server busy: generatenextnumber gets time, add it to the event.time, create new event and push it to the heap
@@ -204,6 +207,9 @@ void Simulator::HandleArrivalEvent(const Event &event)
 
 void Simulator::HandleDepartureEvent(const Event &event)
 {
+    //update Simulation Clock time
+    this->simulationClockTime = event.time ;
+
     /*
      * get the vm object
      * if sever is busy: update the total request count in the vm; if the count is non zero schedule a departure event
@@ -248,4 +254,8 @@ void Simulator::HandleDepartureEvent(const Event &event)
 }
 
 void Simulator::HandleMigrationCompletionEvent(const Event &event)
-{ }
+{
+    //update Simulation Clock time
+    this->simulationClockTime = event.time ;
+
+}
