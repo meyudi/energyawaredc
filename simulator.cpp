@@ -5,7 +5,6 @@
 #include <iostream>
 #include <algorithm>
 #include "simulator.h"
-#include "configuration.h"
 
 Simulator::Simulator()
 {
@@ -37,6 +36,7 @@ Simulator::Simulator()
     for (unsigned int i = 0; i < dc.totalPMs; i++)
     {
         dc.physicalMachines[i].physicalMachineId = i;
+        dc.physicalMachines[i].memoryConsumed = 0;
         dc.physicalMachines[i].utilization = 0;
         cin >> dc.physicalMachines[i].totalMemory;
     }
@@ -56,6 +56,7 @@ Simulator::Simulator()
         dc.virtualmachines[i].isMigrating = false;
     }
 
+    // Assign the PMs a ring Id, using round robin, starting from inner ring.
     for (unsigned int i = 0, ringId = 0; i < dc.totalPMs; i++, ringId = (++ringId) % 3)
     {
         dc.physicalMachines[i].ringId = ringId;
@@ -63,6 +64,7 @@ Simulator::Simulator()
         dc.physicalMachines[i].state = static_cast<PowerState>(ringId);
     }
 
+    // Assign the VMs a PM, using round robin, starting from PM Id 0.
     for (unsigned int i = 0, hostId = 0; i < dc.totalVMs; i++, hostId = (++hostId) % dc.totalPMs)
     {
         dc.virtualmachines[i].hostId = hostId;
@@ -86,14 +88,18 @@ int Simulator::Start()
     // Initialize the eventQueue with all arrivals for the VMs.
     InitializeEventQueue();
     Event nextEvent;
+
+    // TODO: Change this to run till the end of time.
     while (dc.unitsConsumed <= dc.totalUnits)
+//    while (this->simulationClockTime < 96*15*60)
     {
         // get the next event
-        nextEvent.time = eventQueue.top().time;
-        nextEvent.type = eventQueue.top().type;
-        nextEvent.vmId = eventQueue.top().vmId;
-        nextEvent.pmId = eventQueue.top().pmId;
-        nextEvent.newPmId = eventQueue.top().newPmId;
+        nextEvent = eventQueue.top(); // Faster than what was done below.
+//        nextEvent.time = eventQueue.top().time;
+//        nextEvent.type = eventQueue.top().type;
+//        nextEvent.vmId = eventQueue.top().vmId;
+//        nextEvent.pmId = eventQueue.top().pmId;
+//        nextEvent.newPmId = eventQueue.top().newPmId;
 
         switch (nextEvent.type)
         {
@@ -127,7 +133,7 @@ void Simulator::InitializeEventQueue()
     Logger logger(this->logLevel);
     logger.log(LogLevel::DEBUG) << "Initializing event queue..." << endl;
 
-    SimulationTime arrivalTime = 0.0;
+    SimulationTime arrivalTime;
     //goto each and every virtual machine and call GenerateNextNumber with rng index and inverse of arrival rate
     for (unsigned int i = 0; i < dc.totalVMs; ++i)
     {
@@ -204,23 +210,26 @@ void Simulator::HandleArrivalEvent(const Event &event)
 
     // change in physical machine state
 
-    // memory consumption of the virtual and physical machines increment by requestMemorySize; no change in cpu utilization
+    // memory consumption of the virtual and physical machines increment by requestMemorySize
     dc.virtualmachines[event.vmId].memoryConsumed += dc.virtualmachines[event.vmId].requestMemorySize;
-//    dc.physicalMachines[event.pmId].memoryConsumed += dc.virtualmachines[event.vmId].requestMemorySize;
-    dc.physicalMachines[event.pmId].memoryConsumed =
-        dc.physicalMachines[event.pmId].memoryConsumed + dc.virtualmachines[event.vmId].requestMemorySize
-            > dc.physicalMachines[event.pmId].totalMemory ? dc.physicalMachines[event.pmId].totalMemory :
-        dc.physicalMachines[event.pmId].memoryConsumed + dc.virtualmachines[event.vmId].requestMemorySize;
+    if (!dc.virtualmachines[event.vmId].isMigrating)
+        dc.physicalMachines[event.pmId].memoryConsumed += dc.virtualmachines[event.vmId].requestMemorySize;
+//    dc.physicalMachines[event.pmId].memoryConsumed =
+//        dc.physicalMachines[event.pmId].memoryConsumed + dc.virtualmachines[event.vmId].requestMemorySize
+//            > dc.physicalMachines[event.pmId].totalMemory ? dc.physicalMachines[event.pmId].totalMemory :
+//        dc.physicalMachines[event.pmId].memoryConsumed + dc.virtualmachines[event.vmId].requestMemorySize;
 
+    // Change CPU utilization if lambda has changed
     newUtilization =
         dc.virtualmachines[event.vmId].lambda[(int) event.time / 900] / dc.virtualmachines[event.vmId].mu > 1 ? 1.0f :
         dc.virtualmachines[event.vmId].lambda[(int) event.time / 900] / dc.virtualmachines[event.vmId].mu;
 
     if (newUtilization != dc.virtualmachines[event.vmId].utilization)
     {
-        dc.physicalMachines[event.pmId].utilization +=
-            (newUtilization - dc.virtualmachines[event.pmId].utilization)
-                / dc.physicalMachines[event.pmId].vmList.size();
+        if (!dc.virtualmachines[event.vmId].isMigrating)
+            dc.physicalMachines[event.pmId].utilization +=
+                (newUtilization - dc.virtualmachines[event.vmId].utilization)
+                    / dc.physicalMachines[event.pmId].vmList.size();
 
         dc.virtualmachines[event.vmId].utilization = newUtilization;
     }
@@ -250,7 +259,6 @@ void Simulator::HandleDepartureEvent(const Event &event)
 {
     // Initialize the logger object in the function.
     Logger logger(this->logLevel);
-    //logger.log(LogLevel::INFO) << event.time << ": Departure: VM: " << event.vmId << " PM: " << event.pmId << endl;
 
     /*
      * get the vm object
@@ -263,43 +271,47 @@ void Simulator::HandleDepartureEvent(const Event &event)
     SimulationTime nextTime;
     float newUtilization;
 
+//    if (dc.virtualmachines[event.vmId].totalRequestCount > 0)
+//    {
+    dc.virtualmachines[event.vmId].totalRequestCount -= 1;
+
     if (dc.virtualmachines[event.vmId].totalRequestCount > 0)
     {
-        dc.virtualmachines[event.vmId].totalRequestCount -= 1;
+        // There are more requests in line, so schedule a departure event.
+        nextTime = rng.GenerateNextNumber(2 * event.vmId + 1, dc.virtualmachines[event.vmId].mu);
 
-        if (dc.virtualmachines[event.vmId].totalRequestCount > 0)
-        {
-            nextTime = rng.GenerateNextNumber(2 * event.vmId + 1, dc.virtualmachines[event.vmId].mu);
+        Event nextDeparture =
+            Event(event.time + nextTime, EventType::REQUEST_DEPARTURE, event.vmId, event.pmId, event.newPmId);
 
-            Event nextDeparture =
-                Event(event.time + nextTime, EventType::REQUEST_DEPARTURE, event.vmId, event.pmId, event.newPmId);
-
-            eventQueue.push(nextDeparture);
-        }
-
+        eventQueue.push(nextDeparture);
     }
-    else
-    {
-        // do not do anything
-    }
+
+//    }
+//    else
+//    {
+//        // do not do anything
+//    }
 
     // change in physical machine state
 
-    // memory consumption of the virtual and physical machines increment by requestMemorySize; no change in cpu utilization
+    // memory consumption of the virtual and physical machines decrement by requestMemorySize
     dc.virtualmachines[event.vmId].memoryConsumed -= dc.virtualmachines[event.vmId].requestMemorySize;
-//    dc.physicalMachines[event.pmId].memoryConsumed -= dc.virtualmachines[event.vmId].requestMemorySize;
-    dc.physicalMachines[event.pmId].memoryConsumed =
-        dc.physicalMachines[event.pmId].memoryConsumed < dc.virtualmachines[event.vmId].requestMemorySize ? 0 :
-        dc.physicalMachines[event.pmId].memoryConsumed - dc.virtualmachines[event.vmId].requestMemorySize;
+    if (!dc.virtualmachines[event.vmId].isMigrating)
+        dc.physicalMachines[event.pmId].memoryConsumed -= dc.virtualmachines[event.vmId].requestMemorySize;
+//        dc.physicalMachines[event.pmId].memoryConsumed =
+//            dc.physicalMachines[event.pmId].memoryConsumed < dc.virtualmachines[event.vmId].requestMemorySize ? 0 :
+//            dc.physicalMachines[event.pmId].memoryConsumed - dc.virtualmachines[event.vmId].requestMemorySize;
 
+    // Change CPU utilization if lambda has changed
     newUtilization =
         dc.virtualmachines[event.vmId].lambda[(int) event.time / 900] / dc.virtualmachines[event.vmId].mu > 1 ? 1.0f :
         dc.virtualmachines[event.vmId].lambda[(int) event.time / 900] / dc.virtualmachines[event.vmId].mu;
     if (newUtilization != dc.virtualmachines[event.vmId].utilization)
     {
-        dc.physicalMachines[event.pmId].utilization +=
-            (newUtilization - dc.virtualmachines[event.pmId].utilization)
-                / dc.physicalMachines[event.pmId].vmList.size();
+        if (!dc.virtualmachines[event.vmId].isMigrating)
+            dc.physicalMachines[event.pmId].utilization +=
+                (newUtilization - dc.virtualmachines[event.vmId].utilization)
+                    / dc.physicalMachines[event.pmId].vmList.size();
 
         dc.virtualmachines[event.vmId].utilization = newUtilization;
     }
@@ -338,37 +350,21 @@ void Simulator::HandleMigrationCompletionEvent(const Event &event)
      * change the power state of the new pm if was in idle state
      */
 
-    // remove the vm from the current physical machine
-//    dc.physicalMachines[event.pmId].memoryConsumed -= dc.virtualmachines[event.vmId].memoryConsumed;
-    dc.physicalMachines[event.pmId].memoryConsumed =
-        dc.physicalMachines[event.pmId].memoryConsumed < dc.virtualmachines[event.vmId].memoryConsumed ? 0 :
-        dc.physicalMachines[event.pmId].memoryConsumed - dc.virtualmachines[event.vmId].memoryConsumed;
-
-    if (dc.physicalMachines[event.pmId].vmList.size() > 1)
-        dc.physicalMachines[event.pmId].utilization =
-            (dc.physicalMachines[event.pmId].utilization * dc.physicalMachines[event.pmId].vmList.size()
-                 < dc.virtualmachines[event.vmId].utilization ? 0 :
-             dc.physicalMachines[event.pmId].utilization * dc.physicalMachines[event.pmId].vmList.size()
-                 - dc.virtualmachines[event.vmId].utilization) / (dc.physicalMachines[event.pmId].vmList.size() - 1);
-
-    dc.physicalMachines[event.pmId].vmList.erase(std::remove(dc.physicalMachines[event.pmId].vmList.begin(),
-                                                             dc.physicalMachines[event.pmId].vmList.end(),
-                                                             event.vmId), dc.physicalMachines[event.pmId].vmList.end());
-
     // add the vm to the new physical machine
     dc.physicalMachines[event.newPmId].utilization =
         (dc.physicalMachines[event.newPmId].utilization * dc.physicalMachines[event.newPmId].vmList.size()
             + dc.virtualmachines[event.vmId].utilization) / (dc.physicalMachines[event.newPmId].vmList.size() + 1);
-    dc.physicalMachines[event.newPmId].utilization =
-        dc.physicalMachines[event.newPmId].utilization > 1 ? 1.0f : dc.physicalMachines[event.newPmId].utilization;
+    //TODO: See if we need this any more. Else keep commented.
+//    dc.physicalMachines[event.newPmId].utilization =
+//        dc.physicalMachines[event.newPmId].utilization > 1 ? 1.0f : dc.physicalMachines[event.newPmId].utilization;
 
     dc.physicalMachines[event.newPmId].vmList.push_back(event.vmId);
 
-//    dc.physicalMachines[event.newPmId].memoryConsumed += dc.virtualmachines[event.vmId].memoryConsumed;
-    dc.physicalMachines[event.newPmId].memoryConsumed =
-        dc.physicalMachines[event.newPmId].memoryConsumed + dc.virtualmachines[event.vmId].memoryConsumed
-            > dc.physicalMachines[event.newPmId].totalMemory ? dc.physicalMachines[event.newPmId].totalMemory :
-        dc.physicalMachines[event.newPmId].memoryConsumed + dc.virtualmachines[event.vmId].memoryConsumed;
+    dc.physicalMachines[event.newPmId].memoryConsumed += dc.virtualmachines[event.vmId].memoryConsumed;
+//    dc.physicalMachines[event.newPmId].memoryConsumed =
+//        dc.physicalMachines[event.newPmId].memoryConsumed + dc.virtualmachines[event.vmId].memoryConsumed
+//            > dc.physicalMachines[event.newPmId].totalMemory ? dc.physicalMachines[event.newPmId].totalMemory :
+//        dc.physicalMachines[event.newPmId].memoryConsumed + dc.virtualmachines[event.vmId].memoryConsumed;
 
     // change the host id of the vm
     dc.virtualmachines[event.vmId].hostId = event.newPmId;
@@ -378,6 +374,13 @@ void Simulator::HandleMigrationCompletionEvent(const Event &event)
 
     // before the state change update the energy consumed;
     UpdateEnergyConsumption(event);
+
+
+    // remove from the old PM
+    dc.physicalMachines[event.pmId].vmList.erase(std::remove(dc.physicalMachines[event.pmId].vmList.begin(),
+                                                             dc.physicalMachines[event.pmId].vmList.end(),
+                                                             event.vmId),
+                                                 dc.physicalMachines[event.pmId].vmList.end());
 
     //change the power state of the pms
     if (dc.physicalMachines[event.pmId].vmList.size() == 0)
@@ -394,20 +397,7 @@ void Simulator::HandleMigrationCompletionEvent(const Event &event)
         // add to idle ring id list
         dc.idleRing[dc.physicalMachines[event.pmId].ringId].push_back(event.pmId);
     }
-    if (dc.physicalMachines[event.newPmId].state == PowerState::IDLE)
-    {
-        dc.physicalMachines[event.newPmId].state = static_cast<PowerState>( dc.physicalMachines[event.newPmId].ringId );
 
-        // remove from the idle ring id list
-        dc.idleRing[dc.physicalMachines[event.newPmId].ringId].erase(
-            std::remove(dc.idleRing[dc.physicalMachines[event.newPmId].ringId].begin(),
-                        dc.idleRing[dc.physicalMachines[event.newPmId].ringId].end(),
-                        event.pmId),
-            dc.idleRing[dc.physicalMachines[event.newPmId].ringId].end());
-
-        // push to the ring id list
-        dc.ring[dc.physicalMachines[event.pmId].ringId].push_back(event.pmId);
-    }
 
     logger.log(LogLevel::INFO) << event.time << ": Migration: VM: (" << event.vmId << ","
         << dc.virtualmachines[event.vmId].memoryConsumed << "," << dc.virtualmachines[event.vmId].utilization << ","
@@ -429,6 +419,55 @@ void Simulator::HandleMigrationCompletionEvent(const Event &event)
     //update Simulation Clock time
     this->simulationClockTime = event.time;
 
+}
+
+void Simulator::HandleMigrationStartEvent(const Event &event)
+{
+    // remove the vm from the current physical machine
+//    dc.physicalMachines[event.pmId].memoryConsumed -= dc.virtualmachines[event.vmId].memoryConsumed;
+//    dc.physicalMachines[event.pmId].memoryConsumed =
+//        dc.physicalMachines[event.pmId].memoryConsumed < dc.virtualmachines[event.vmId].memoryConsumed ? 0 :
+//        dc.physicalMachines[event.pmId].memoryConsumed - dc.virtualmachines[event.vmId].memoryConsumed;
+
+//    if (dc.physicalMachines[event.pmId].vmList.size() > 1)
+//        dc.physicalMachines[event.pmId].utilization =
+//            (dc.physicalMachines[event.pmId].utilization * dc.physicalMachines[event.pmId].vmList.size()
+//                 < dc.virtualmachines[event.vmId].utilization ? 0 :
+//             dc.physicalMachines[event.pmId].utilization * dc.physicalMachines[event.pmId].vmList.size()
+//                 - dc.virtualmachines[event.vmId].utilization) / (dc.physicalMachines[event.pmId].vmList.size() - 1);
+
+
+    // bring the new physical machine up
+    if (dc.physicalMachines[event.newPmId].state == PowerState::IDLE)
+    {
+        dc.physicalMachines[event.newPmId].state = static_cast<PowerState>( dc.physicalMachines[event.newPmId].ringId );
+
+        // remove from the idle ring id list
+        dc.idleRing[dc.physicalMachines[event.newPmId].ringId].erase(
+            std::remove(dc.idleRing[dc.physicalMachines[event.newPmId].ringId].begin(),
+                        dc.idleRing[dc.physicalMachines[event.newPmId].ringId].end(),
+                        event.pmId),
+            dc.idleRing[dc.physicalMachines[event.newPmId].ringId].end());
+
+        // push to the ring id list
+        dc.ring[dc.physicalMachines[event.pmId].ringId].push_back(event.pmId);
+    }
+
+
+
+    // remove the vm from the current physical machine
+    if (dc.physicalMachines[event.pmId].vmList.size() > 1)
+    {
+        dc.physicalMachines[event.pmId].memoryConsumed -= dc.virtualmachines[event.vmId].memoryConsumed;
+        dc.physicalMachines[event.pmId].utilization =
+            (dc.physicalMachines[event.pmId].utilization * dc.physicalMachines[event.pmId].vmList.size()
+                - dc.virtualmachines[event.vmId].utilization) / (dc.physicalMachines[event.pmId].vmList.size() - 1);
+    }
+    else
+    {
+        dc.physicalMachines[event.pmId].memoryConsumed = 0;
+        dc.physicalMachines[event.pmId].utilization = 0;
+    }
 }
 
 /*-----------------------------------------------------------------------------------------*/
@@ -463,6 +502,7 @@ void Simulator::MigrateVM(const Event &event)
                                      j);
                         dc.virtualmachines[event.vmId].isMigrating = true;
                         this->eventQueue.push(event1);
+                        HandleMigrationStartEvent(event1);
                         candidatePMFound = true;
                         break;
                     }
@@ -498,6 +538,7 @@ void Simulator::MigrateVM(const Event &event)
                                      j);
                         dc.virtualmachines[event.vmId].isMigrating = true;
                         this->eventQueue.push(event1);
+                        HandleMigrationStartEvent(event1);
                         candidatePMFound = true;
                         break;
                     }
@@ -539,6 +580,7 @@ void Simulator::MigrateVM(const Event &event)
                                      j);
                         dc.virtualmachines[event.vmId].isMigrating = true;
                         this->eventQueue.push(event1);
+                        HandleMigrationStartEvent(event1);
                         candidatePMFound = true;
                         break;
                     }
@@ -575,6 +617,7 @@ void Simulator::MigrateVM(const Event &event)
                                      j);
                         dc.virtualmachines[event.vmId].isMigrating = true;
                         this->eventQueue.push(event1);
+                        HandleMigrationStartEvent(event1);
                         candidatePMFound = true;
                         break;
                     }

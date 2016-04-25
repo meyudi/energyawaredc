@@ -2,6 +2,7 @@
 // Created by Uddhav Arote on 07/04/16.
 //
 
+#include <iomanip>
 #include "utility.h"
 
 Logger::Logger(LogLevel logLevel)
@@ -22,7 +23,7 @@ ostringstream &Logger::log(LogLevel logLevel)
 
 Logger::~Logger()
 {
-    cout << ss.str();
+    cout << setprecision(5) << ss.str();
     ss.flush();
     nullstream.flush();
 }

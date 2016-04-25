@@ -7,7 +7,7 @@
 
 typedef unsigned int Id;
 
-typedef int Rate; // Unit of rates is per second.
+typedef float Rate; // Unit of rates is per second. Converted to float for ease of calculation of utilization
 typedef unsigned long long Byte;
 
 class VirtualMachine

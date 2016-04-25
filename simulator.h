@@ -34,6 +34,8 @@ private:
 
     void MigrateVM(const Event &) ;
     void UpdateEnergyConsumption(const Event &);
+    void HandleMigrationStartEvent(const Event &);
+
 public:
     Simulator();
     ~Simulator();
