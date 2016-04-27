@@ -34,7 +34,8 @@ private:
 
     void MigrateVM(const Event &) ;
     void UpdateEnergyConsumption(const Event &);
-    void HandleMigrationStartEvent(const Event &);
+    //void HandleMigrationStartEvent(const Event &);
+    void PrintStatus(string);
 
 public:
     Simulator();
@@ -42,8 +43,8 @@ public:
     int Start();
     void InitializeEventQueue();
     //SimulationTime
-    void HandleArrivalEvent(const Event &);
-    void HandleDepartureEvent(const Event &);
+    void HandleArrivalEvent( Event &);
+    void HandleDepartureEvent( Event &);
     void HandleMigrationCompletionEvent(const Event &);
 
 };

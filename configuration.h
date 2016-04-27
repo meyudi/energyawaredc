@@ -10,7 +10,7 @@
 class Configuration
 {
 public:
-    static constexpr SimulationTime VM_MIGRATION_TIME = 10; // All times in seconds
+    static constexpr SimulationTime VM_MIGRATION_TIME = 0; // All times in seconds
 
     // Power consumed by Physical Machines in each state
     // Units: Watts
