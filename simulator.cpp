@@ -61,8 +61,17 @@ Simulator::Simulator()
     for (unsigned int i = 0, ringId = 0; i < dc.totalPMs; i++, ringId = (++ringId) % 3)
     {
         dc.physicalMachines[i].ringId = ringId;
-        dc.ring[ringId].push_back(i);
-        dc.physicalMachines[i].state = static_cast<PowerState>(ringId);
+        // Add PMs to idle rings for ring ids 0,1
+        if (ringId != 2)
+        {
+            dc.idleRing[ringId].push_back(i);
+            dc.physicalMachines[i].state = PowerState::IDLE;
+        }
+        else
+        {
+            dc.ring[ringId].push_back(i);
+            dc.physicalMachines[i].state = static_cast<PowerState>(ringId);
+        }
     }
 
     /*// Assign the VMs a PM, using round robin, starting from PM Id 0.
@@ -373,11 +382,11 @@ void Simulator::HandleMigrationCompletionEvent(const Event &event)
         dc.idleRing[dc.physicalMachines[event.newPmId].ringId].erase(
             std::remove(dc.idleRing[dc.physicalMachines[event.newPmId].ringId].begin(),
                         dc.idleRing[dc.physicalMachines[event.newPmId].ringId].end(),
-                        event.pmId),
+                        event.newPmId),
             dc.idleRing[dc.physicalMachines[event.newPmId].ringId].end());
 
         // push to the ring id list
-        dc.ring[dc.physicalMachines[event.pmId].ringId].push_back(event.pmId);
+        dc.ring[dc.physicalMachines[event.newPmId].ringId].push_back(event.newPmId);
     }
 
     // remove the vm from the current physical machine; basically subtract the numbers.
@@ -473,82 +482,6 @@ void Simulator::HandleMigrationCompletionEvent(const Event &event)
 
 }
 
-//void Simulator::HandleMigrationStartEvent(const Event &event)
-//{
-// Initialize the logger object in the function.
-//Logger logger(this->logLevel);
-
-// remove the vm from the current physical machine
-//    dc.physicalMachines[event.pmId].memoryConsumed -= dc.virtualmachines[event.vmId].memoryConsumed;
-//    dc.physicalMachines[event.pmId].memoryConsumed =
-//        dc.physicalMachines[event.pmId].memoryConsumed < dc.virtualmachines[event.vmId].memoryConsumed ? 0 :
-//        dc.physicalMachines[event.pmId].memoryConsumed - dc.virtualmachines[event.vmId].memoryConsumed;
-
-//    if (dc.physicalMachines[event.pmId].vmList.size() > 1)
-//        dc.physicalMachines[event.pmId].utilization =
-//            (dc.physicalMachines[event.pmId].utilization * dc.physicalMachines[event.pmId].vmList.size()
-//                 < dc.virtualmachines[event.vmId].utilization ? 0 :
-//             dc.physicalMachines[event.pmId].utilization * dc.physicalMachines[event.pmId].vmList.size()
-//                 - dc.virtualmachines[event.vmId].utilization) / (dc.physicalMachines[event.pmId].vmList.size() - 1);
-
-/*
-// bring the new physical machine up
-if (dc.physicalMachines[event.newPmId].state == PowerState::IDLE)
-{
-    dc.physicalMachines[event.newPmId].state = static_cast<PowerState>( dc.physicalMachines[event.newPmId].ringId );
-
-    // remove from the idle ring id list
-    dc.idleRing[dc.physicalMachines[event.newPmId].ringId].erase(
-        std::remove(dc.idleRing[dc.physicalMachines[event.newPmId].ringId].begin(),
-                    dc.idleRing[dc.physicalMachines[event.newPmId].ringId].end(),
-                    event.pmId),
-        dc.idleRing[dc.physicalMachines[event.newPmId].ringId].end());
-
-    // push to the ring id list
-    dc.ring[dc.physicalMachines[event.pmId].ringId].push_back(event.pmId);
-}
-
-// remove the vm from the current physical machine; basically subtract the numbers.
-if (dc.physicalMachines[event.pmId].vmList.size() > 1)
-{
-    dc.physicalMachines[event.pmId].memoryConsumed -= dc.virtualmachines[event.vmId].memoryConsumed;
-    dc.physicalMachines[event.pmId].utilization =
-        (dc.physicalMachines[event.pmId].utilization * dc.physicalMachines[event.pmId].vmList.size()
-            - dc.virtualmachines[event.vmId].utilization) / (dc.physicalMachines[event.pmId].vmList.size() - 1);
-}
-else
-{
-    dc.physicalMachines[event.pmId].memoryConsumed = 0;
-    dc.physicalMachines[event.pmId].utilization = 0;
-}
-
-// remove from the old PM
-dc.physicalMachines[event.pmId].vmList.erase(std::remove(dc.physicalMachines[event.pmId].vmList.begin(),
-                                                         dc.physicalMachines[event.pmId].vmList.end(),
-                                                         event.vmId),
-                                             dc.physicalMachines[event.pmId].vmList.end());
-*/
-
-//    logger.log(LogLevel::INFO) << event.time - Configuration::VM_MIGRATION_TIME << ": Migration Start: VM: ("
-//        << event.vmId << ","
-//        << dc.virtualmachines[event.vmId].memoryConsumed << "," << dc.virtualmachines[event.vmId].utilization << ","
-//        << dc.virtualmachines[event.vmId].totalRequestCount << "," << dc.virtualmachines[event.vmId].isMigrating
-//        << "): old PM: (" << event.pmId << "," << dc.physicalMachines[event.pmId].memoryConsumed << ","
-//        << dc.physicalMachines[event.pmId].utilization << "," << dc.physicalMachines[event.pmId].ringId << ","
-//        << dc.physicalMachines[event.pmId].vmList.size() << "): new PM: (" << event.newPmId << ","
-//        << dc.physicalMachines[event.newPmId].memoryConsumed << ","
-//        << dc.physicalMachines[event.newPmId].utilization << "," << dc.physicalMachines[event.newPmId].ringId << ","
-//        << dc.physicalMachines[event.newPmId].vmList.size() << "): Ring: (";
-//
-//    for (unsigned int i = 0; i < 3; i++)
-//        logger.log(LogLevel::INFO) << dc.ring[i].size() << ",";
-//    logger.log(LogLevel::INFO) << "): idle Ring: (";
-//    for (unsigned int i = 0; i < 3; i++)
-//        logger.log(LogLevel::INFO) << dc.idleRing[i].size() << ",";
-//    logger.log(LogLevel::INFO) << "): Energy: " << dc.unitsConsumed << endl;
-
-//}
-
 /*-----------------------------------------------------------------------------------------*/
 void Simulator::MigrateVM(const Event &event)
 {
@@ -561,10 +494,11 @@ void Simulator::MigrateVM(const Event &event)
         if ((float) dc.physicalMachines[event.pmId].memoryConsumed / dc.physicalMachines[event.pmId].totalMemory
             > threshold)
         {
-            // Cycle through all the PMs in the ring from current ring to progressively higher power rings
+            // Cycle through all the PMs in the ring from current ring to
+            // progressively higher power rings till ring 1 (ring 0 handled differently)
             // and place the current VM on the first PM to have enough free space
             bool candidatePMFound = false;
-            for (int i = dc.physicalMachines[event.pmId].ringId; i >= 0; i--)
+            for (int i = dc.physicalMachines[event.pmId].ringId; i > 0; i--)
             {
                 threshold = (float) (3 - i) / 3;
                 for (unsigned int j = 0; j < dc.ring[i].size(); j++)
@@ -592,7 +526,6 @@ void Simulator::MigrateVM(const Event &event)
             }
             if (!candidatePMFound)
             {
-                // TODO: This is the corner case when all PMs in the inner most ring are also loaded fully. We do not handle this currently.
                 // We look for idle PMs in the ring from current ring to progressively higher power rings
                 for (int i = dc.physicalMachines[event.pmId].ringId; i >= 0; i--)
                 {
@@ -621,15 +554,37 @@ void Simulator::MigrateVM(const Event &event)
                     if (candidatePMFound)
                         break;
                 }
+
+                if (!candidatePMFound)
+                {
+                    // This is the case when no suitable machine was found on any lower rings.
+                    // So we need to fit the VM on one of ring0 PMs.
+                    // We find the one with the least memory and push it there.
+                    Id minPM = dc.ring[0][0];
+                    for (unsigned int i = 0; i < dc.ring[0].size(); i++)
+                        if (dc.physicalMachines[dc.ring[0][i]].memoryConsumed < dc.physicalMachines[minPM].memoryConsumed)
+                            minPM = dc.ring[0][i];
+
+                    // We found a candidate PM
+                    Event event1(event.time + Configuration::VM_MIGRATION_TIME,
+                                 EventType::MIGRATION_FINISHED,
+                                 event.vmId,
+                                 event.pmId,
+                                 minPM);
+                    dc.virtualmachines[event.vmId].isMigrating = true;
+                    this->eventQueue.push(event1);
+                    candidatePMFound = true;
+                }
             }
         }
-            // Check if CPU crossed the upper threshold
         else if (dc.physicalMachines[event.pmId].utilization > threshold)
         {
-            // Cycle through all the PMs in the ring from current ring to progressively higher power rings
+            // Check if CPU crossed the upper threshold
+            // Cycle through all the PMs in the ring from current ring to
+            // progressively higher power rings till ring 1 (ring 0 handled differently)
             // and place the current VM on the first PM to have enough free CPU
             bool candidatePMFound = false;
-            for (int i = dc.physicalMachines[event.pmId].ringId; i >= 0; i--)
+            for (int i = dc.physicalMachines[event.pmId].ringId; i > 0; i--)
             {
                 threshold = (float) (3 - i) / 3;
                 for (unsigned int j = 0; j < dc.ring[i].size(); j++)
@@ -654,9 +609,8 @@ void Simulator::MigrateVM(const Event &event)
             }
             if (!candidatePMFound)
             {
-                // TODO: This is the corner case when all PMs in the inner most ring are also loaded fully. We do not handle this currently.
                 // We look for idle PMs in the ring from current ring to progressively higher power rings
-                for (unsigned int i = dc.physicalMachines[event.pmId].ringId; i >= 0; i--)
+                for (int i = dc.physicalMachines[event.pmId].ringId; i >= 0; i--)
                 {
                     // TODO: The following code can be simplified. Just dump it on the first idle PM. No need for these checks.
                     threshold = (float) (3 - i) / 3;
@@ -680,9 +634,32 @@ void Simulator::MigrateVM(const Event &event)
                     if (candidatePMFound)
                         break;
                 }
+
+                if (!candidatePMFound)
+                {
+                    // This is the case when no suitable machine was found on any lower rings.
+                    // So we need to fit the VM on one of ring0 PMs.
+                    // We find the one with the least memory and push it there.
+                    Id minPM = dc.ring[0][0];
+                    for (unsigned int i = 0; i < dc.ring[0].size(); i++)
+                        if (dc.physicalMachines[dc.ring[0][i]].memoryConsumed < dc.physicalMachines[minPM].memoryConsumed)
+                            minPM = dc.ring[0][i];
+
+                    // We found a candidate PM
+                    Event event1(event.time + Configuration::VM_MIGRATION_TIME,
+                                 EventType::MIGRATION_FINISHED,
+                                 event.vmId,
+                                 event.pmId,
+                                 minPM);
+                    dc.virtualmachines[event.vmId].isMigrating = true;
+                    this->eventQueue.push(event1);
+                    candidatePMFound = true;
+                }
             }
         }
-    } // If power state is medium or high, i.e. ring 1,0, then only check if lower threshold (.33,.66) is crossed.
+    }
+
+    // If power state is medium or high, i.e. ring 1,0, then only check if lower threshold (.33,.66) is crossed.
     if (dc.physicalMachines[event.pmId].state == PowerState::MEDIUM_POWER
         || dc.physicalMachines[event.pmId].state == PowerState::HIGH_POWER)
     {
@@ -718,10 +695,11 @@ void Simulator::MigrateVM(const Event &event)
                 if (candidatePMFound)
                     break;
             }
-            if (!candidatePMFound)
-            {
-                // TODO: This is the corner case when all PMs in the outer rings are also loaded fully. We do not handle this currently.
-            }
+//            if (!candidatePMFound)
+//            {
+//                // TODO: This is the corner case when all PMs in the outer rings are also loaded fully.
+//                // We do not handle this currently.
+//            }
         }
 
         // Check if CPU crossed lower the threshold
